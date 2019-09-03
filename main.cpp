@@ -8,24 +8,24 @@
 //   cv::imwrite(filename, pic);
 // }
 void getHoughLines(cv::Mat& pic, std::vector<cv::Vec4i> &lines, double rho=1,
-        double theta=PI/180, int threshold=80, double maxLineLength=30,
-        double maxLineGap=10)
+        double theta=PI/180, int threshold=300, double minLineLength=250,
+        double maxLineGap=15)
 {
-  HoughLinesP(pic, lines, rho, theta, threshold, maxLineLength, maxLineGap);   
+  HoughLinesP(pic, lines, rho, theta, threshold, minLineLength, maxLineGap);   
 }
 
-void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=20, int ratio=3, int kernel_size=3) {
-  cv::Mat detected_edges;
+void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=25, int ratio=3, int kernel_size=3) {
+  cv::Mat blurred;
   cv::Mat gray;
   cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-  cv::blur(gray, detected_edges, cv::Size(3,3));
-  cv::Canny(detected_edges, dst, threshold, threshold*ratio, kernel_size);
+  cv::blur(gray, blurred, cv::Size(3,3));
+  cv::Canny(blurred, dst, threshold, threshold*ratio, kernel_size);
 }
 
-void drawLine(cv::Mat& src, cv::Vec4i line) {
+void drawLine(cv::Mat& src, cv::Vec4i line, cv::Scalar color) {
   cv::Point p1(line[0], line[1]);
   cv::Point p2(line[2], line[3]);
-  cv::line(src, p1, p2, cv::Scalar(0, 0, 255), 3);
+  cv::line(src, p1, p2, color, 3);
 }
 
 int main( int argc, char** argv ) {
@@ -44,10 +44,16 @@ int main( int argc, char** argv ) {
   getHoughLines(edges, lines);
   cv::cvtColor(edges, edges, cv::COLOR_GRAY2BGR);
   
-  // hello
+  std::vector<cv::Scalar> colors;
+  colors.push_back(cv::Scalar(0, 0, 255));
+  colors.push_back(cv::Scalar(0, 255, 0));
+  colors.push_back(cv::Scalar(100, 100, 0));
+  colors.push_back(cv::Scalar(255, 0, 0));
+  colors.push_back(cv::Scalar(0, 255, 255));
+
+  std::cout << "lines size: " << lines.size() << std::endl;
   for (int i = 0; i < lines.size(); i++) {
-    std::cout << lines[i] << std::endl;
-    drawLine(edges, lines[i]);
+    drawLine(edges, lines[i], colors.at(i%colors.size()));
   }
 
   cv::imwrite("./edges.jpg", edges);
