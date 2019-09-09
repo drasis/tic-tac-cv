@@ -11,22 +11,21 @@ int main(void) {
     }
 
     std::cout << "video capture opened\n";
+    int save_count = 0;
 
     cv::Mat frame;
     while (true) {
         cap.read(frame);
-        std::cout << "frame read\n";
         if (frame.empty()) {
             std::cerr << "ERROR no frame\n";
             break;
         }
-        std::cout << "checked if frame is empty\n";
         cv::imshow("live", frame);
-        std::cout << "imshow\n";
         if (cv::waitKey(5) >= 0) {
-            break;
+            std::string img_name = "image" + std::to_string(save_count++) + ".jpg";
+            std::cout << "Saving frame to " << img_name << std::endl; 
+            cv::imwrite(img_name, frame);
         }
-        std::cout << "waited for key\n";
     }
 
     return 0;

@@ -17,10 +17,7 @@ void getHoughLines(cv::Mat& pic, std::vector<cv::Vec4i> &lines, double rho=1,
 void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=25, int ratio=3, int kernel_size=3) {
   cv::Mat blurred;
   cv::Mat gray;
-  cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-  cv::blur(gray, blurred, cv::Size(3,3));
-  cv::Canny(blurred, dst, threshold, threshold*ratio, kernel_size);
-}
+  cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY); cv::blur(gray, blurred, cv::Size(3,3)); cv::Canny(blurred, dst, threshold, threshold*ratio, kernel_size); }
 
 void drawLine(cv::Mat& src, cv::Vec4i line, cv::Scalar color) {
   cv::Point p1(line[0], line[1]);
