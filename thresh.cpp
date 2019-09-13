@@ -70,72 +70,72 @@ void fillInCheese(cv::Mat& src, cv::Mat& dst) {
   dst = (src | inv);
 }
 
-int main(int argc, char** argv) {
-  cv::CommandLineParser parser( argc, argv, "{@input | ../data/fruits.jpg | input image}" );
-  cv::Mat src = cv::imread( parser.get<cv::String>( "@input" ), cv::IMREAD_COLOR ); // Load an image
+/*
+ * int hUpper=137, int sUpper=162 int vUpper = 255,
+ * int hLower = 96, int sLower = 14, int vLower = 118
+ */
+
+void cropToPaper(cv::Mat& src, cv::Mat& dst,
+                 cv::Scalar lowThresh=cv::Scalar(96, 14, 118),
+                 cv::Scalar highThresh=cv::Scalar(137, 162, 255),
+                 bool dispContours=false) {
+                 
   cv::Mat afterThresh;
   cv::Mat srcHsv;
   cv::Mat GOLoutput;
-  cv::Mat out;
+  cv::Mat notSwissCheese;
   std::vector<std::vector<cv::Point>> contourPoints;
   std::vector<cv::Vec4i> hierarchy;
+
+  // turn src into hsv img 
+  cv::cvtColor(src, srcHsv, cv::COLOR_BGR2HSV);
+
+  // create a mask of paper colors defined by hUpper/hLower, etc.
+  cv::inRange(srcHsv, lowThresh, highThresh, afterThresh);
+
+  // perform novel computer vision algorithm to smooth paper mask
+  slidingGameOfLife(afterThresh, GOLoutput);
+  fillInCheese(GOLoutput, notSwissCheese);
+
+  cv::findContours(notSwissCheese, contourPoints, hierarchy,
+          cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0)); 
+
+  // get largest contour
+  int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+
+  if (dispContours) {
+    cv::Scalar color(0, 0, 255);
+    cv::drawContours(src, contourPoints, largestContourIndex, color, 2, 8,
+            hierarchy, 0, cv::Point());
+  }
+
+  // bounding rectangle around the largest contour which should be the paper
+  cv::RotatedRect boundRect = cv::minAreaRect(contourPoints[largestContourIndex]);
+  cv::Point2f vertices[4];
+  boundRect.points(vertices);
+  cv::Point2f dstPoints[4] = { cv::Point2f(0, src.rows), cv::Point2f(0,0),
+      cv::Point2f(src.cols, 0), cv::Point2f(src.cols, src.rows) };
+
+  // get homography between paper coordinates and screen coordinates
+  cv::Mat homographyMatrix = cv::getPerspectiveTransform(vertices, dstPoints);
+ 
+  // put the warped image in dst
+  cv::warpPerspective(src, dst, homographyMatrix, src.size());
+}
+
+int main(int argc, char** argv) {
+  cv::CommandLineParser parser( argc, argv, "{@input | ../data/fruits.jpg | input image}" );
+  cv::Mat src = cv::imread( parser.get<cv::String>( "@input" ), cv::IMREAD_COLOR ); // Load an image
   if( src.empty() )
   {
     std::cout << "Could not open or find the image!\n" << std::endl;
     std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
     return -1;
   }
-  cv::cvtColor(src, srcHsv, cv::COLOR_BGR2HSV);
-  // colors of paper
-  int hUpper = 137;
-  int sUpper = 162;
-  int vUpper = 255;
-  int hLower = 96;
-  int sLower = 14;
-  int vLower = 118;
 
-  // threshold the Hsv image
-  cv::inRange(srcHsv, cv::Scalar(hLower, sLower, vLower), 
-  	cv::Scalar(hUpper, sUpper, vUpper), afterThresh);
-//  cv::imshow("thresholded", afterThresh);
- // cv::waitKey(0);
-
-  slidingGameOfLife(afterThresh, GOLoutput);
-  fillInCheese(GOLoutput, out);
-
-  //get contour
-  cv::findContours(out, contourPoints, hierarchy,
-          cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0)); 
-
-  cv::Scalar color(0, 0, 255);
-  int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
-  cv::drawContours(src, contourPoints, largestContourIndex, color, 2, 8, hierarchy, 0, cv::Point());
-
-
-  // turn contour into approximated polygon
-  //std::vector<cv::Point> contourPolygon;
-  //cv::approxPolyDP(contourPoints[contourPoints.size()-1], contourPolygon, 3, true);
-  //cv::Rect boundRect = boundingRect(contourPolygon);
-  //cv::rectangle(src, boundRect.tl(), boundRect.br(), cv::Scalar(255,0,0), 2);
-  //
-  cv::RotatedRect boundRect = cv::minAreaRect(contourPoints[largestContourIndex]);
-  cv::Point2f vertices[4];
-  boundRect.points(vertices);
-  //for (int i = 0; i < 4; i++) {
-  //  cv::line(src, vertices[i], vertices[(i+1)%4], cv::Scalar(255,0,0), 2); 
-  //  std::cout << vertices[i] << std::endl;
-  //}
-
-  cv::Point2f dstPoints[4] = { cv::Point2f(0, src.rows), cv::Point2f(0,0), cv::Point2f(src.cols, 0),
-      cv::Point2f(src.cols, src.rows)};
-
-  cv::Mat homographyMatrix = cv::getPerspectiveTransform(vertices, dstPoints);
-  std::cout << homographyMatrix << std::endl;
-  
-  cv::Mat warpedImg;
-  cv::warpPerspective(src, warpedImg, homographyMatrix, src.size());
-
-  cv::imshow("contours", warpedImg);
+  cv::Mat paperImg;
+  cropToPaper(src, paperImg);
+  cv::imshow("contours", paperImg);
   cv::waitKey(0);
 
   return 0;
