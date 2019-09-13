@@ -75,7 +75,7 @@ void fillInCheese(cv::Mat& src, cv::Mat& dst) {
  * int hLower = 96, int sLower = 14, int vLower = 118
  */
 
-void cropToPaper(cv::Mat& src, cv::Mat& dst,
+void getCroppedMatrix(cv::Mat& src, cv::Mat& homographyMatrix,
                  cv::Scalar lowThresh=cv::Scalar(96, 14, 118),
                  cv::Scalar highThresh=cv::Scalar(137, 162, 255),
                  bool dispContours=false) {
@@ -117,26 +117,131 @@ void cropToPaper(cv::Mat& src, cv::Mat& dst,
       cv::Point2f(src.cols, 0), cv::Point2f(src.cols, src.rows) };
 
   // get homography between paper coordinates and screen coordinates
-  cv::Mat homographyMatrix = cv::getPerspectiveTransform(vertices, dstPoints);
+  homographyMatrix = cv::getPerspectiveTransform(vertices, dstPoints);
  
   // put the warped image in dst
-  cv::warpPerspective(src, dst, homographyMatrix, src.size());
+}
+
+void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=25, int ratio=3, int kernel_size=3) {
+  cv::Mat blurred;
+  cv::Mat gray;
+  cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY); 
+  cv::blur(gray, blurred, cv::Size(3,3)); 
+  cv::Canny(blurred, dst, threshold, threshold*ratio, kernel_size); 
+}
+
+
+void findRectcoords(cv::Mat& paperImg, std::vector<cv::RotatedRect>& boardCoords) {
+
+}
+
+void drawRectCoords(cv::Mat& paperImg, cv::Mat& boardOverlay, 
+	std::vector<cv::RotatedRect>& boardCoords) {
+
+}
+
+void getRidOfPerimeter(cv::Mat& src, cv::Mat& dst) {
+  cv::Mat floodFilled = src.clone();
+  cv::floodFill(floodFilled, cv::Point(0,0), cv::Scalar(125));
+
+  // cv::Mat inv;
+  // cv::bitwise_not(floodFilled, dst);
+
+  dst = floodFilled;//(src | inv);
 }
 
 int main(int argc, char** argv) {
-  cv::CommandLineParser parser( argc, argv, "{@input | ../data/fruits.jpg | input image}" );
-  cv::Mat src = cv::imread( parser.get<cv::String>( "@input" ), cv::IMREAD_COLOR ); // Load an image
-  if( src.empty() )
-  {
-    std::cout << "Could not open or find the image!\n" << std::endl;
-    std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
-    return -1;
+  // cv::CommandLineParser parser( argc, argv, "{@input | ../data/fruits.jpg | input image}" );
+  // cv::Mat src = cv::imread( parser.get<cv::String>( "@input" ), cv::IMREAD_COLOR ); // Load an image
+  // if( src.empty() )
+  // {
+  //   std::cout << "Could not open or find the image!\n" << std::endl;
+  //   std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
+  //   return -1;
+  // }
+  cv::VideoCapture cap(2);
+  cv::Mat src;
+  if (!cap.isOpened()) {
+      std::cout << "couldn't open capture\n";
+      return -1;
   }
+  
+  cap.read(src);
 
+  cv::Mat homographyMatrix;
+  std::vector<cv::Mat> toOrEventually;
   cv::Mat paperImg;
-  cropToPaper(src, paperImg);
-  cv::imshow("contours", paperImg);
-  cv::waitKey(0);
+  cv::Mat boardOverlay;
+  std::vector<cv::RotatedRect> boardCoords;
+  getCroppedMatrix(src, homographyMatrix);
+
+
+  while (true) {
+    cap.read(src);
+    if (src.empty()) {
+        std::cerr << "ERROR no frame\n";
+        break;
+    }
+
+	  // findRectcoords(paperImg, boardCoords);
+	  // drawRectCoords(paperImg, boardOverlay, boardCoords);
+    cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
+	  getEdges(paperImg, boardOverlay, 10);
+
+	  slidingGameOfLife(boardOverlay,boardOverlay, 10, .1);
+	  slidingGameOfLife(boardOverlay,boardOverlay, 4, .9);
+	  fillInCheese(boardOverlay, boardOverlay);
+	  
+	  if (toOrEventually.size() < 10) {
+	  	toOrEventually.push_back(boardOverlay);
+	  	continue;
+	  } 
+	  cv::Mat s = toOrEventually[0];
+	  //boardOverlay = toOrEventually[0];
+  	for (int i = 1; i < toOrEventually.size(); i++) {
+  		cv::bitwise_or(toOrEventually[i], s, s);
+  	}
+	  slidingGameOfLife(s,s, 10, .3);
+	  //draw contours
+	  std::vector<std::vector<cv::Point>> contourPoints;
+	  std::vector<cv::Vec4i> hierarchy;
+	  cv::findContours(s, contourPoints, hierarchy,
+	        cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+
+	  cv::Scalar color(0, 0, 255);
+	  for (int i = 0; i < contourPoints.size(); ++i) {
+	  	if (contourPoints[i].size() > 300) {
+	  		cv::Rect boundingRect = cv::boundingRect(contourPoints[i]);
+	  		if (boundingRect.y < 50 || boundingRect.y + boundingRect.height > paperImg.rows - 50
+	  			 || boundingRect.x > paperImg.cols - 100 || boundingRect.x < 50) {
+	  			continue;
+	  		}
+	  		// this should be the board
+  		  cv::Scalar color(0, 0, 255);
+	      //cv::drawContours(paperImg, contourPoints, i, color, 2, 8,
+	      //        hierarchy, 0, cv::Point());
+
+          int boxWidth = boundingRect.width / 3;
+          int boxHeight = boundingRect.height / 3;
+          cv::Rect currRect; 
+          currRect.width = boxWidth;
+          currRect.height = boxHeight;
+          for (int j = 0; j < 3; j++) {
+              currRect.x = boundingRect.x + (j * boxWidth);
+              for (int k = 0; k < 3; k++) {
+                currRect.y = boundingRect.y + (k * boxHeight);
+                cv::rectangle(paperImg, currRect, color);
+              }
+
+          }
+	  	}
+	  }
+
+	  // getRidOfPerimeter(boardOverlay, boardOverlay);
+	  cv::imshow("contours", paperImg);
+	  cv::waitKey(1);
+	  toOrEventually.clear();
+  }
 
   return 0;
 }
