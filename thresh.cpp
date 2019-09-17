@@ -102,24 +102,32 @@ void getCroppedMatrix(cv::Mat& src, cv::Mat& homographyMatrix,
 
   // get largest contour
   int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+  if (largestContourIndex < 0) {
+    // something went wrong
+    homographyMatrix = cv::Mat::eye(3, 3, CV_32F);
+    return;
+  } 
 
+  std::cout << "got largest contour\n";
   if (dispContours) {
     cv::Scalar color(0, 0, 255);
     cv::drawContours(src, contourPoints, largestContourIndex, color, 2, 8,
             hierarchy, 0, cv::Point());
   }
-
+  std::cout << "got drawn\n";
+  std::cout << "largest idx: " << largestContourIndex << ", size: " << contourPoints.size() << std::endl;
   // bounding rectangle around the largest contour which should be the paper
   cv::RotatedRect boundRect = cv::minAreaRect(contourPoints[largestContourIndex]);
+  std::cout << "bound rect\n";
   cv::Point2f vertices[4];
   boundRect.points(vertices);
   cv::Point2f dstPoints[4] = { cv::Point2f(0, src.rows), cv::Point2f(0,0),
       cv::Point2f(src.cols, 0), cv::Point2f(src.cols, src.rows) };
 
+  std::cout << "getting homography\n";
   // get homography between paper coordinates and screen coordinates
   homographyMatrix = cv::getPerspectiveTransform(vertices, dstPoints);
  
-  // put the warped image in dst
 }
 
 void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=25, int ratio=3, int kernel_size=3) {
@@ -166,15 +174,18 @@ int main(int argc, char** argv) {
       return -1;
   }
   
+  std::cout << "Opened\n";
   cap.read(src);
-
+  std::cout << "Got first\n";
   cv::Mat homographyMatrix;
   std::vector<cv::Mat> toOrEventually;
   cv::Mat paperImg;
   cv::Mat boardOverlay;
   std::vector<cv::RotatedRect> boardCoords;
-  getCroppedMatrix(src, homographyMatrix);
 
+  std::cout << "getting cropped mat\n";
+  getCroppedMatrix(src, homographyMatrix);
+  std::cout << "done\n";
 
   while (true) {
     cap.read(src);
