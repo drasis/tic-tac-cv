@@ -224,6 +224,43 @@ void drawBoundingBoardRect(const cv::Mat& src, cv::Mat& dst, const cv::Rect& bou
     }
 }
 
+bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
+    // get difference image between current and baselin
+    // both images should be 8 bit bgr
+    cv::Mat baselineHsv, currentHsv, diff;
+    cv::cvtColor(baseline, baselineHsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(current, currentHsv, cv::COLOR_BGR2HSV);
+
+    cv::absdiff(baselineHsv, currentHsv, diff);
+
+    cv::Mat foregroundMask = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
+    int count = 0;
+    for (int i = 0; i < diff.rows; i++) {
+        for (int j = 0; j < diff.cols; j++) {
+
+            // get current Hsv pixel
+            cv::Vec3b currPixel = diff.at<cv::Vec3b>(i, j);
+
+            // get euclidean distance from that pixel to (0,0,0)
+            float dist = (currPixel[0]*currPixel[0] + currPixel[1]*currPixel[1] + currPixel[2]*currPixel[2]);
+            dist = sqrt(dist);
+            if (dist > thresh) {
+                count++;
+                foregroundMask.at<unsigned char>(i, j) = 255;
+            }
+        }
+    }
+    std::cout << "white pixels = " << count << std::endl;
+    cv::imshow("foreground", foregroundMask);
+    cv::waitKey(5);
+    return true;
+}
+
+bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
+    return false;
+}
+
+#if 1
 int main(int argc, char** argv) {
   cv::VideoCapture cap(2);
   cv::Mat src;
@@ -236,16 +273,19 @@ int main(int argc, char** argv) {
   cap.read(src);
   std::cout << "Got first\n";
   cv::Mat homographyMatrix;
-  std::vector<cv::Mat> toOrEventually;
   cv::Mat paperImg;
   cv::Mat boardOverlay;
-  std::vector<cv::RotatedRect> boardCoords;
 
   std::cout << "getting cropped mat\n";
   findHomography(src, homographyMatrix);
   std::cout << "done\n";
   std::cout << "homography matrix: " << homographyMatrix << std::endl;
 
+  // get baseline
+  cv::Mat baseline;
+  cv::warpPerspective(src, baseline, homographyMatrix, src.size());
+  //cv::imshow("baseline", baseline);
+  //cv::waitKey(0);
 
   cv::Rect boundingRect;
   while (!findBoardBounds(cap, homographyMatrix, boundingRect)) {
@@ -260,13 +300,17 @@ int main(int argc, char** argv) {
     }
 
     cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
+    handInFrame(baseline, paperImg); 
+    //cv::imshow("test", paperImg);
+    //cv::waitKey(5);
 
-    drawBoundingBoardRect(paperImg, paperImg, boundingRect);
+
+    //drawBoundingBoardRect(paperImg, paperImg, boundingRect);
     
-	cv::imshow("contours", paperImg);
-	cv::waitKey(1);
-	toOrEventually.clear();
+	//cv::imshow("contours", paperImg);
+	//cv::waitKey(1);
   }
 
   return 0;
 }
+#endif
