@@ -47,6 +47,7 @@ public:
     bool returnPen(void);
     bool flush(void);
     bool setPenSpeed(int v);
+    bool drawText(std::string text);
 
 private:
     bool sendBytes(std::string bytes);

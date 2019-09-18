@@ -41,6 +41,11 @@ Plotter::~Plotter() {
 
 }
 
+bool Plotter::drawText(std::string text) {
+    std::string cmd = "LB" + text + ";"; 
+    return this->addCmd(cmd);
+}
+
 bool Plotter::setPenSpeed(int v) {
     if (v < 1 || v > 20) {
         return false;
@@ -139,14 +144,13 @@ bool Plotter::flush(void) {
     return true;
 }
 
-#if 0
+#if 1
 int main(void) {
     Plotter p;
     p.selectPen(1);
-    p.drawLine(90, 90, 7000, 1000);
-    p.drawLine(1000, 7000, 80, 80);
-    p.drawLine(400, 400, 10000, 200);
-
+    p.drawText(std::string("Hello world"));
+    p.flush();
+    
     return 0;
 }
 #endif

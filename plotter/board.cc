@@ -16,9 +16,6 @@ static const PaperCoord boardToPaper[3][3] = {
     { {.x = 6750, .y = 4800}, {.x = 4800, .y = 4800}, {.x = 2850, .y = 4800}, },
 };
 
-static const PaperCoord boardTopLeft = {.x = 900, .y = 900};
-static const PaperCoord boardTopRight = {.x = 6750, .y = 6750};
-
 static Plotter plt;
 
 bool drawBoard(void) {
@@ -119,7 +116,7 @@ bool drawWin(WinLine line) {
     return true;
 }
 
-#if 1
+#if 0
 int main(void) {
     selectPen(1);
     drawBoard();
