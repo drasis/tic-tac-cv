@@ -5,7 +5,7 @@
 
 typedef enum _WinLine
 {
-    WIN_COL_0,
+    WIN_COL_0 = 0,
     WIN_COL_1,
     WIN_COL_2,
 

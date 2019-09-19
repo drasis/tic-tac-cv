@@ -1,24 +1,13 @@
-local min = 0
-local max = 1
+local max = 0
+local min = 1
 local pieces = {}
-pieces[0] = "o"
-pieces[1] = "x"
+pieces[0] = "x"
+pieces[1] = "o"
+pieces[2] = " "
 local board
 local infinity = math.huge
 local totalNodes = 0
 local leafs = 0
-
--- function allEqual( ... )
--- 	local arg = table.pack(...)
--- 	local a1 = ...
--- 	for i=0,#arg do
--- 		print(i)
--- 		if arg[i] ~= a1 then
--- 			return false
--- 		end
--- 	end
--- 	return true
--- end
 
 function otherPlayer(player)
 	return (player + 1) % 2
@@ -89,6 +78,30 @@ function boardNode(game, pl, depth, i, j)
 		end,
 		gameOver = function(self)
 			return checkMax(self) ~= 0 or checkMin(self) ~= 0
+		end,
+		bestMove = function(self)
+			if #self.moves == 0 then
+				return nil
+			end
+			-- if self.player == max then
+				local bestscore = -infinity
+				local bestState = 1
+			-- else
+			-- end
+			for i,v in ipairs(self:possibleMoves()) do
+				if v.best.score > bestscore then
+					bestState = i
+					bestscore = v.best.score
+				end
+				if checkMax(v) then
+					bestState = i
+					bestscore = v.score
+					break
+				end
+			end
+			print("row: ", self:possibleMoves()[bestState].rowToMe)
+			print("col: ", self:possibleMoves()[bestState].colToMe)
+			return self:possibleMoves()[bestState]
 		end
 	}
 end
@@ -184,13 +197,17 @@ function minimax(state)
 		local gotBack = minimax(possibleMove)
 		local move = gotBack.move
 		local score = gotBack.score
-		if state.player == max and score > best.score then
-			best.move = possibleMove
-			best.score = score
+		if state.player == max then
+			if score > best.score then
+				best.move = possibleMove
+				best.score = score
+			end
 		end
-		if state.player == min and score < best.score then
-			best.move = possibleMove
-			best.score = score
+		if state.player == min then
+			if score < best.score then
+				best.move = possibleMove
+				best.score = score
+			end
 		end
 		state.score = state.score + possibleMove.score
 	end
@@ -199,29 +216,47 @@ function minimax(state)
 end
 
 
-loadGame()
-board.state[1][1] = "o"
-
-board:display()
-print("------")
-minimax(board)
-print("board score: ", board.score)
-while checkMax(board) == 0 and checkMin(board) == 0 do
-	io.write("row, column: ")
-	a,b = io.read("*n","*n")
-	local piece = pieces[otherPlayer(board.player)]
-	board = boardNode(copyAndSubstitue(board.state, a, b, piece),
-		otherPlayer(board.player), board.depth + 1)
-	board:display()
-	print("------\ncomputer move:")
+function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8)
+	loadGame()
+	board.state[1][1] = p0
+	board.state[1][2] = p1
+	board.state[1][3] = p2
+	board.state[2][1] = p3
+	board.state[2][2] = p4
+	board.state[2][3] = p5
+	board.state[3][1] = p6
+	board.state[3][2] = p7
+	board.state[3][3] = p8
 	minimax(board)
-	board = board.best.move
-	board:display()
+	board = board:bestMove()
+	rtm = board.rowToMe - 1
+	ctm = board.colToMe - 1
+	return rtm * 3 + ctm
 end
 
+-- board:display()
+-- print("------")
+-- minimax(board)
+-- print("board score: ", board.score)
+-- while checkMax(board) == 0 and checkMin(board) == 0 do
+-- 	io.write("row, column: ")
+-- 	a,b = io.read("*n","*n")
+-- 	local piece = pieces[otherPlayer(board.player)]
+-- 	board = boardNode(copyAndSubstitue(board.state, a, b, piece),
+-- 		otherPlayer(board.player), board.depth + 1)
+-- 	board:display()
+-- 	if checkMax(board) ~= 0 or checkMin(board) ~= 0 then
+-- 		break
+-- 	end
+-- 	print("------\ncomputer move:")
+-- 	minimax(board)
+-- 	board = board:bestMove()
+-- 	board:display()
+-- end
+
 -- print(board.best.move.best.move.best.score)
-print("total nodes: ", totalNodes)
-print("total leafs: ", leafs)
+-- print("total nodes: ", totalNodes)
+-- print("total leafs: ", leafs)
 -- for i,v in ipairs(board:possibleMoves()) do
 -- 	for j,q in ipairs(v:possibleMoves()) do
 -- 		for k,s in ipairs(q:possibleMoves()) do

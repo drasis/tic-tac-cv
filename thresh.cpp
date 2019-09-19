@@ -272,65 +272,42 @@ bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
 
 
 // assumes frame has been homographized
-bool checkForO(cv::Mat& baseline, cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
-    int boxHeight = boardBounds.height / 3;
-    int boxWidth = boardBounds.width / 3;
-    for (int i = 0; i < 9; i++) {
-        if (board[i] == BOX_EMPTY) {
-            // check for box in frame
-            cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
-                    boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
-            std::cout << "At " << i/3 << ", " << i%3 << std::endl;
-            cv::Mat baseSubImg = baseline(subRect);
-            cv::Mat currSubImg = frame(subRect);
-            /*
-            std::cout << "Num diff (" << i/3 << ", " << i%3 << "): "
-                << numDiffPixels(baseSubImg, currSubImg) << std::endl;
-            cv::imshow("after", currSubImg);
-            cv::imshow("before", baseSubImg);
-            cv::waitKey(0);
-            */
+bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
+  int boxHeight = boardBounds.height / 3;
+  int boxWidth = boardBounds.width / 3;
+  for (int i = 0; i < 9; i++) {
+  if (board[i] == BOX_EMPTY) {
+      // check for box in frame
+      cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
+              boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
+      cv::Mat currSubImg = frame(subRect);
+      
+      // contour shit
+      cv::Mat boxEdges;
+      getEdges(currSubImg, boxEdges, 10);
 
-            // contour shit
-            cv::Mat boxEdges;
-            getEdges(currSubImg, boxEdges, 10);
-
-            std::vector<std::vector<cv::Point>> contourPoints;
-            std::vector<cv::Vec4i> hierarchy;
-            cv::findContours(boxEdges, contourPoints, hierarchy,
-                  cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
-            int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
-            if (largestContourIndex < 0) {
-                continue;
-            }
-            for (int i = 0; i < contourPoints.size(); i++) {
-                if (!closeToTheEdge(currSubImg, contourPoints[i])) {
-                    if (contourPoints[i].size() > 80) {
-                        std::cout << "THERES A FRIKIN O HERE\n";
-                        cv::Scalar color(0, 0, 255);
-                        cv::drawContours(currSubImg, contourPoints, i, color, 2, 8,
-                                hierarchy, 0, cv::Point());
-             
-                    }
-                }
-            }
-            /*
-            if (closeToTheEdge(currSubImg, ))
-            std::cout << "Largest contour in batch: " << contourPoints[largestContourIndex].size()
-                << std::endl;
-            cv::Scalar color(0, 0, 255);
-            cv::drawContours(currSubImg, contourPoints, largestContourIndex, color, 2, 8,
-                    hierarchy, 0, cv::Point());
- 
-            */
-            cv::imshow("contour points", currSubImg);
-            cv::waitKey(0);
+      std::vector<std::vector<cv::Point>> contourPoints;
+      std::vector<cv::Vec4i> hierarchy;
+      cv::findContours(boxEdges, contourPoints, hierarchy,
+            cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+      int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+      if (largestContourIndex < 0) {
+          continue;
+      }
+      for (int j = 0; j < contourPoints.size(); j++) {
+        if (!closeToTheEdge(currSubImg, contourPoints[j])) {
+          if (contourPoints[j].size() > 80) {
+            board[i] = BOX_O;
+            return true; // :)        
+          }
         }
+      }
     }
-    return true;
+  }
+  return false;
 }
 
-#if 1
+#if 0
 int main(int argc, char** argv) {
   cv::VideoCapture cap(2);
   cv::Mat src;
@@ -373,7 +350,7 @@ int main(int argc, char** argv) {
     }
 
     cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
-    checkForO(baseline, paperImg, boundingRect, board);
+    checkForO(paperImg, boundingRect, board);
     //cv::imshow("test", paperImg);
     //cv::waitKey(5);
 
