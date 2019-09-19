@@ -224,7 +224,7 @@ void drawBoundingBoardRect(const cv::Mat& src, cv::Mat& dst, const cv::Rect& bou
     }
 }
 
-bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
+int numDiffPixels(cv::Mat& baseline, cv::Mat& current, float thresh=90.0) {
     // get difference image between current and baselin
     // both images should be 8 bit bgr
     cv::Mat baselineHsv, currentHsv, diff;
@@ -242,7 +242,8 @@ bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
             cv::Vec3b currPixel = diff.at<cv::Vec3b>(i, j);
 
             // get euclidean distance from that pixel to (0,0,0)
-            float dist = (currPixel[0]*currPixel[0] + currPixel[1]*currPixel[1] + currPixel[2]*currPixel[2]);
+            float dist = (currPixel[0]*currPixel[0] + currPixel[1]*currPixel[1]
+                    + currPixel[2]*currPixel[2]);
             dist = sqrt(dist);
             if (dist > thresh) {
                 count++;
@@ -250,14 +251,83 @@ bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
             }
         }
     }
-    std::cout << "white pixels = " << count << std::endl;
-    cv::imshow("foreground", foregroundMask);
-    cv::waitKey(5);
-    return true;
+    return count; 
 }
 
-bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
-    return false;
+bool handInFrame(cv::Mat& baseline, cv::Mat& current) {
+    return numDiffPixels(baseline, current) > 30000;
+}
+
+bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
+    int closeCount = 0;
+    for(int i = 0; i < contourPoints.size(); i++) {
+        if(snippet.cols - contourPoints[i].x < 20 || contourPoints[i].x < 20) {
+            closeCount++;
+        } else if (snippet.rows - contourPoints[i].y < 20 || contourPoints[i].y < 20) {
+            closeCount++;
+        }
+    }
+    return closeCount/contourPoints.size() > .7;
+}
+
+
+// assumes frame has been homographized
+bool checkForO(cv::Mat& baseline, cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
+    int boxHeight = boardBounds.height / 3;
+    int boxWidth = boardBounds.width / 3;
+    for (int i = 0; i < 9; i++) {
+        if (board[i] == BOX_EMPTY) {
+            // check for box in frame
+            cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
+                    boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
+            std::cout << "At " << i/3 << ", " << i%3 << std::endl;
+            cv::Mat baseSubImg = baseline(subRect);
+            cv::Mat currSubImg = frame(subRect);
+            /*
+            std::cout << "Num diff (" << i/3 << ", " << i%3 << "): "
+                << numDiffPixels(baseSubImg, currSubImg) << std::endl;
+            cv::imshow("after", currSubImg);
+            cv::imshow("before", baseSubImg);
+            cv::waitKey(0);
+            */
+
+            // contour shit
+            cv::Mat boxEdges;
+            getEdges(currSubImg, boxEdges, 10);
+
+            std::vector<std::vector<cv::Point>> contourPoints;
+            std::vector<cv::Vec4i> hierarchy;
+            cv::findContours(boxEdges, contourPoints, hierarchy,
+                  cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+            int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+            if (largestContourIndex < 0) {
+                continue;
+            }
+            for (int i = 0; i < contourPoints.size(); i++) {
+                if (!closeToTheEdge(currSubImg, contourPoints[i])) {
+                    if (contourPoints[i].size() > 80) {
+                        std::cout << "THERES A FRIKIN O HERE\n";
+                        cv::Scalar color(0, 0, 255);
+                        cv::drawContours(currSubImg, contourPoints, i, color, 2, 8,
+                                hierarchy, 0, cv::Point());
+             
+                    }
+                }
+            }
+            /*
+            if (closeToTheEdge(currSubImg, ))
+            std::cout << "Largest contour in batch: " << contourPoints[largestContourIndex].size()
+                << std::endl;
+            cv::Scalar color(0, 0, 255);
+            cv::drawContours(currSubImg, contourPoints, largestContourIndex, color, 2, 8,
+                    hierarchy, 0, cv::Point());
+ 
+            */
+            cv::imshow("contour points", currSubImg);
+            cv::waitKey(0);
+        }
+    }
+    return true;
 }
 
 #if 1
@@ -284,13 +354,16 @@ int main(int argc, char** argv) {
   // get baseline
   cv::Mat baseline;
   cv::warpPerspective(src, baseline, homographyMatrix, src.size());
-  //cv::imshow("baseline", baseline);
-  //cv::waitKey(0);
+  cv::imshow("baseline", baseline);
+  cv::waitKey(0);
 
   cv::Rect boundingRect;
   while (!findBoardBounds(cap, homographyMatrix, boundingRect)) {
       std::cout << "couldn't find board\n";
   }
+
+  BoxState board[9] = { BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY,
+      BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY };
 
   while (true) {
     cap.read(src);
@@ -300,7 +373,7 @@ int main(int argc, char** argv) {
     }
 
     cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
-    handInFrame(baseline, paperImg); 
+    checkForO(baseline, paperImg, boundingRect, board);
     //cv::imshow("test", paperImg);
     //cv::waitKey(5);
 
