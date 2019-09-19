@@ -83,7 +83,9 @@ void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
   std::vector<cv::Vec4i> hierarchy;
 
   // turn src into hsv img 
+  std::cout << "in find homograph\n";
   cv::cvtColor(src, srcHsv, cv::COLOR_BGR2HSV);
+  std::cout << "color\n";
 
   // create a mask of paper colors defined by hUpper/hLower, etc.
   cv::inRange(srcHsv, lowThresh, highThresh, afterThresh);
@@ -276,32 +278,34 @@ bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   int boxHeight = boardBounds.height / 3;
   int boxWidth = boardBounds.width / 3;
   for (int i = 0; i < 9; i++) {
-  if (board[i] == BOX_EMPTY) {
-      // check for box in frame
-      cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
-              boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
-      cv::Mat currSubImg = frame(subRect);
-      
-      // contour shit
-      cv::Mat boxEdges;
-      getEdges(currSubImg, boxEdges, 10);
+      if (board[i] == BOX_EMPTY) {
+          std::cout << "checking " << i << " for O's" << std::endl;
+          // check for box in frame
+          cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
+                  boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
+          cv::Mat currSubImg = frame(subRect);
+          
+          // contour shit
+          cv::Mat boxEdges;
+          getEdges(currSubImg, boxEdges, 10);
 
-      std::vector<std::vector<cv::Point>> contourPoints;
-      std::vector<cv::Vec4i> hierarchy;
-      cv::findContours(boxEdges, contourPoints, hierarchy,
-            cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
-      int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
-      if (largestContourIndex < 0) {
-          continue;
-      }
-      for (int j = 0; j < contourPoints.size(); j++) {
-        if (!closeToTheEdge(currSubImg, contourPoints[j])) {
-          if (contourPoints[j].size() > 80) {
-            board[i] = BOX_O;
-            return true; // :)        
+          std::vector<std::vector<cv::Point>> contourPoints;
+          std::vector<cv::Vec4i> hierarchy;
+          cv::findContours(boxEdges, contourPoints, hierarchy,
+                cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+          int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+          if (largestContourIndex < 0) {
+              continue;
           }
-        }
-      }
+          for (int j = 0; j < contourPoints.size(); j++) {
+            if (!closeToTheEdge(currSubImg, contourPoints[j])) {
+              if (contourPoints[j].size() > 80) {
+                std::cout << "found O\n";
+                board[i] = BOX_O;
+                return true; // :)        
+              }
+            }
+          }
     }
   }
   return false;

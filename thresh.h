@@ -6,6 +6,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include <iostream>
 #include <vector>
+#include "board.h"
 
 typedef enum _BoxState {
     BOX_EMPTY = 0,
