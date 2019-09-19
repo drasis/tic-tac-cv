@@ -144,7 +144,7 @@ bool Plotter::flush(void) {
     return true;
 }
 
-#if 1
+#if 0
 int main(void) {
     Plotter p;
     p.selectPen(1);

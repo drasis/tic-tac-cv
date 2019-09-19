@@ -254,8 +254,8 @@ int numDiffPixels(cv::Mat& baseline, cv::Mat& current, float thresh=90.0) {
     return count; 
 }
 
-bool handInFrame(cv::Mat& baseline, cv::Mat& current) {
-    return numDiffPixels(baseline, current) > 30000;
+bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
+    return numDiffPixels(baseline, current, thresh) > 30000;
 }
 
 bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
@@ -272,7 +272,7 @@ bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
 
 
 // assumes frame has been homographized
-bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
+bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   int boxHeight = boardBounds.height / 3;
   int boxWidth = boardBounds.width / 3;
   for (int i = 0; i < 9; i++) {

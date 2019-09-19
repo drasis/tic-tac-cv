@@ -3,6 +3,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+#include "luaconf.h"
 
 void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
     // draw tictactoe board
@@ -30,12 +31,12 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     for (int i = 0; i < 9; i++) {
         lua_pushinteger(L, board[i]);
     }
-    if (lua_pcall(L, 9, 1, 0) != LUA_OK) {
+    if (lua_pcall(L, 9, 1, 0) != 0) {
         throw std::runtime_error("Lua is NOT ok");
     }
 
-    ret = lua_tointegerx(L, -1, &isnum);
-    if (!isnum || ret < 0 || ret > 8) {
+    ret = lua_tointeger(L, -1);
+    if (ret < 0 || ret > 8) {
         throw std::runtime_error("Lua is NOT OK");
     }
     lua_pop(L, 1);
@@ -57,6 +58,7 @@ bool someoneHasWon(BoxState board[9]) {
     return (board[0] == board[4] == board[8] && board[0] != BOX_EMPTY)
             || (board[2] == board[4] == board[6] && board[2] != BOX_EMPTY);
 }
+
 void drawWinner(BoxState board[9]) {
     // WinLine[8] = {  }
     for (int i = 0; i < 3; ++i) {

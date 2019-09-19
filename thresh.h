@@ -15,7 +15,7 @@ typedef enum _BoxState {
 
 // assumes that both are pictures of the paper
 bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh=90.0);
-bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]);
+bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]);
 
 void findHomography(cv::Mat& frame, cv::Mat& homography,
         cv::Scalar lowThresh=cv::Scalar(96, 14, 118), 
