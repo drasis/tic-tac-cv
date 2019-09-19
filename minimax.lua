@@ -217,7 +217,9 @@ end
 
 
 function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8)
+    print("we're in the getPlotterMove func")
 	loadGame()
+    print("game loaded")
 	board.state[1][1] = p0
 	board.state[1][2] = p1
 	board.state[1][3] = p2
@@ -227,6 +229,7 @@ function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8)
 	board.state[3][1] = p6
 	board.state[3][2] = p7
 	board.state[3][3] = p8
+    print("put pieces in place")
 	minimax(board)
 	board = board:bestMove()
 	rtm = board.rowToMe - 1

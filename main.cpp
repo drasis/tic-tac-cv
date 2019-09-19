@@ -7,9 +7,9 @@
 
 void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
     // draw tictactoe board
-    selectPen(1);
+    //selectPen(1);
     std::cout << "drawing board\n:";
-    drawBoard();
+    //drawBoard();
 
     selectPen(2);
     // send pen to 0,0
@@ -41,13 +41,15 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     int isnum;
     lua_getglobal(L, "getPlotterMove"); 
     for (int i = 0; i < 9; i++) {
-        lua_pushinteger(L, board[i]);
+        lua_pushinteger(L, (int)board[i]);
     }
     if (lua_pcall(L, 9, 1, 0) != 0) {
-        throw std::runtime_error("Lua is NOT ok");
+        std::cout << lua_tostring(L, -1) << std::endl;
+        throw std::runtime_error("Lua pcall NOT ok");
     }
 
     ret = lua_tointeger(L, -1);
+    std::cout << "got " << ret << " from lua\n";
     if (ret < 0 || ret > 8) {
         throw std::runtime_error("Lua is NOT OK");
     }
@@ -157,7 +159,11 @@ int main(void) {
     }
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
-    luaL_dofile(L, "minimax.lua");
+    int status = luaL_dofile(L, "../minimax.lua");
+    if (status) {
+        std::cout << "couldn't open minimax.lua\n";
+        return -1;
+    }
     std::cout << L << std::endl;
     std::cout << "opened lua file\n";
     while (playAgain) {
