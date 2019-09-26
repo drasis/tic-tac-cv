@@ -1,8 +1,8 @@
 local max = 0
 local min = 1
 local pieces = {}
-pieces[0] = "x"
-pieces[1] = "o"
+pieces[0] = "o"
+pieces[1] = "x"
 pieces[2] = " "
 local board
 local infinity = math.huge
@@ -13,7 +13,7 @@ function otherPlayer(player)
 	return (player + 1) % 2
 end
 
-function loadGame()
+function loadGame(pl)
 	local game = {}
 	for i=1,3 do
 		local q = {}
@@ -22,7 +22,7 @@ function loadGame()
 		end
 		game[i] = q
 	end
-	board = boardNode(game, 0, 0)
+	board = boardNode(game, pl, 0)
 end
 
 function boardNode(game, pl, depth, i, j)
@@ -203,21 +203,21 @@ function minimax(state)
 				best.score = score
 			end
 		end
-		if state.player == min then
+		if state.player == max then
 			if score < best.score then
 				best.move = possibleMove
 				best.score = score
 			end
 		end
-		state.score = state.score + possibleMove.score
+		--state.score = state.score + possibleMove.score
 	end
 	state.best = best
 	return best
 end
 
 
-function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8)
-	loadGame()
+function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8, player)
+	loadGame(player)
 	board.state[1][1] = p0
 	board.state[1][2] = p1
 	board.state[1][3] = p2
@@ -234,10 +234,12 @@ function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8)
 	return rtm * 3 + ctm
 end
 
+-- loadGame(1)
+
 -- board:display()
--- print("------")
--- minimax(board)
--- print("board score: ", board.score)
+-- -- print("------")
+-- -- minimax(board)
+-- -- print("board score: ", board.score)
 -- while checkMax(board) == 0 and checkMin(board) == 0 do
 -- 	io.write("row, column: ")
 -- 	a,b = io.read("*n","*n")
@@ -249,8 +251,10 @@ end
 -- 		break
 -- 	end
 -- 	print("------\ncomputer move:")
--- 	minimax(board)
--- 	board = board:bestMove()
+-- 	getPlotterMove(board.state[1][1], board.state[1][2], board.state[1][3], 
+-- 					board.state[2][1], board.state[2][2], board.state[2][3], 
+-- 					board.state[3][1], board.state[3][2], board.state[3][3], board.player)
+-- 	-- board = board:bestMove()
 -- 	board:display()
 -- end
 
