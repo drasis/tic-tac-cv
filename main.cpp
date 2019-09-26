@@ -5,11 +5,13 @@
 #include "lualib.h"
 #include "luaconf.h"
 
+void printBoard(BoxState board[9]); 
+
 void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
     // draw tictactoe board
-    //selectPen(1);
+    selectPen(1);
     std::cout << "drawing board\n:";
-    //drawBoard();
+    drawBoard();
 
     selectPen(2);
     // send pen to 0,0
@@ -24,14 +26,14 @@ void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) 
     cv::Mat frameWarped;
     cv::warpPerspective(frame, frameWarped, homography, frame.size());
     std::cout << "out of homography:\n" << homography << std::endl;
-    //cv::imshow("out of homography", frameWarped);
-    //cv::waitKey(0);
+//    cv::imshow("out of homography", frameWarped);
+//    cv::waitKey(0);
 
     // find bounds of tictactoe board
     findBoardBounds(cap, homography, boardBounds);
     cv::rectangle(frameWarped, boardBounds, cv::Scalar(0,0,255));
-    //cv::imshow("with rectangle", frameWarped);
-    //cv::waitKey(0);
+//    cv::imshow("with rectangle", frameWarped);
+//    cv::waitKey(0);
     std::cout << "init done" << std::endl;
 }
 
@@ -43,7 +45,8 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     for (int i = 0; i < 9; i++) {
         lua_pushinteger(L, (int)board[i]);
     }
-    if (lua_pcall(L, 9, 1, 0) != 0) {
+    lua_pushinteger(L, 1);
+    if (lua_pcall(L, 10, 1, 0) != 0) {
         std::cout << lua_tostring(L, -1) << std::endl;
         throw std::runtime_error("Lua pcall NOT ok");
     }
@@ -61,39 +64,73 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
 
 bool someoneHasWon(BoxState board[9]) {
     for (int i = 0; i < 3; ++i) {
-        if (board[i] == board[i + 3] == board[i + 6] && board[i] != BOX_EMPTY) {
+        if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
+            //printBoard(board);
             return true;
         }
-        if (board[i * 3] == board[i * 3 + 1] == board[i * 3 + 2] 
-            && board[i * 3] != BOX_EMPTY) {
+        if ((board[i * 3] == board[i * 3 + 1]) && (board[i * 3] == board[i * 3 + 2]) 
+            && (board[i * 3] != BOX_EMPTY)) {
+            //printBoard(board);
             return true;
         }
     }
-    return (board[0] == board[4] == board[8] && board[0] != BOX_EMPTY)
-            || (board[2] == board[4] == board[6] && board[2] != BOX_EMPTY);
+    if ((board[0] == board[4]) && (board[0] == board[8]) && (board[0] != BOX_EMPTY)) {
+        //printBoard(board);
+        return true;
+    }
+    if ((board[2] == board[4]) && (board[2] == board[6]) && (board[2] != BOX_EMPTY)) {
+        return true;
+    }
+    return false;
 }
 
 void drawWinner(BoxState board[9]) {
     // WinLine[8] = {  }
     for (int i = 0; i < 3; ++i) {
-        if ((board[i] == board[i + 3] == board[i + 6] && board[i] != BOX_EMPTY)) {
+        if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
             drawWin((WinLine)(i));
+            //printBoard(board);
             return;
         }
-        if (board[i * 3] == board[i * 3 + 1] == board[i * 3 + 2] 
-            && board[i * 3] != BOX_EMPTY) {
+        if ((board[i * 3] == board[i * 3 + 1]) && (board[i * 3] == board[i * 3 + 2]) 
+            && (board[i * 3] != BOX_EMPTY)) {
             drawWin((WinLine)(i + 3));
+            //printBoard(board);
             return;
         }
     }
-    if (board[0] == board[4] == board[8] && board[0] != BOX_EMPTY) {
+    if ((board[0] == board[4]) && (board[0] == board[8]) && (board[0] != BOX_EMPTY)) {
+        //printBoard(board);
         drawWin(WIN_DIAG_0);
         return;
     }
-    if (board[2] == board[4] == board[6] && board[2] != BOX_EMPTY) {
+    if ((board[2] == board[4]) && (board[2] == board[6]) && (board[2] != BOX_EMPTY)) {
+        //printBoard(board);
         drawWin(WIN_DIAG_1);
         return;
     }
+}
+
+void printBoard(BoxState board[9]) {
+     std::cout << "---------Board State ----------------\n";
+     for (int i = 0; i < 3; i++) {
+         for (int j = 0; j < 3; j++) {
+             int curr = (i*3)+j;
+             switch(board[curr]) {
+                 case BOX_EMPTY:
+                     std::cout << ". ";
+                     break;
+                 case BOX_O:
+                     std::cout << "O ";
+                     break;
+                 case BOX_X:
+                     std::cout << "X ";
+                     break;
+             }
+         }
+         std::cout << std::endl;
+     }
+ 
 }
 
 bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
@@ -123,31 +160,17 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
             int col = -1;
             getPlotterAI(board, &row, &col, L);
             std::cout << "Plotter plays X at (" << row << ", " << col << ")\n"; 
-            std::cout << "---------Board State ----------------\n";
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    int curr = (i*3)+j;
-                    switch(board[curr]) {
-                        case BOX_EMPTY:
-                            std::cout << ". ";
-                            break;
-                        case BOX_O:
-                            std::cout << "O ";
-                            break;
-                        case BOX_X:
-                            std::cout << "X ";
-                            break;
-                    }
-                }
-                std::cout << std::endl;
-            }
+            printBoard(board);
             drawX(row, col);
             gameOver = someoneHasWon(board);
             revealPage();
             baseline = frame.clone();
         }
+        sleep(0.5);
     }
+    selectPen(3);
     drawWinner(board);// THIS NEEDS 2 B IMPLEMENTED LMAO
+    selectPen(0);
     // cap.release();
 }
 
@@ -159,9 +182,10 @@ int main(void) {
     }
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
-    int status = luaL_dofile(L, "../minimax.lua");
+    int status = luaL_dofile(L, "./minimax.lua");
     if (status) {
         std::cout << "couldn't open minimax.lua\n";
+        std::cout << "Error: " << lua_tostring(L, -1) << std::endl;
         return -1;
     }
     std::cout << L << std::endl;
