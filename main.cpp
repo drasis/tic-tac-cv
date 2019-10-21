@@ -8,6 +8,11 @@
 void printBoard(BoxState board[9]); 
 
 void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
+    std::cout << "********************************************" << std::endl;
+    std::cout << "INITIALIZING. DO NOT FUCK WITH THE PLOTTER" << std::endl;
+    std::cout << "********************************************" << std::endl;
+
+
     // draw tictactoe board
     selectPen(1);
     std::cout << "drawing board\n:";
@@ -26,15 +31,17 @@ void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) 
     cv::Mat frameWarped;
     cv::warpPerspective(frame, frameWarped, homography, frame.size());
     std::cout << "out of homography:\n" << homography << std::endl;
-//    cv::imshow("out of homography", frameWarped);
-//    cv::waitKey(0);
+    cv::imshow("out of homography", frameWarped);
+    cv::waitKey(0);
 
     // find bounds of tictactoe board
     findBoardBounds(cap, homography, boardBounds);
     cv::rectangle(frameWarped, boardBounds, cv::Scalar(0,0,255));
-//    cv::imshow("with rectangle", frameWarped);
-//    cv::waitKey(0);
-    std::cout << "init done" << std::endl;
+    cv::imshow("with rectangle", frameWarped);
+    cv::waitKey(0);
+    std::cout << "********************************************" << std::endl;
+    std::cout << "              YOU MAY DRAW NOW" << std::endl;
+    std::cout << "********************************************" << std::endl;
 }
 
 // wrapper for lua calls
@@ -135,7 +142,6 @@ void printBoard(BoxState board[9]) {
 
 bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
     lua_State *L, cv::VideoCapture& cap) {
-    bool gameOver = false;
     BoxState board[9] = {BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY};
     cv::Mat frame;
     cv::Mat baseline;
@@ -146,7 +152,7 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
     // initialize baseline
     cap.read(frame);
     cv::warpPerspective(frame, baseline, homography, frame.size());
-    while (!gameOver) {
+    while (true) {
         cap.read(frame);
         // crop frame to paper
         cv::warpPerspective(frame, frame, homography, frame.size());
@@ -154,6 +160,9 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
             std::cout << "hand found in frame\n";
             continue;
         } else if (checkForO(frame, boardBounds, board)) {
+            if (someoneHasWon(board)) {
+                break;
+            }
             std::cout << "Found O in frame. Plotter's turn\n";
             // Plotter's turn.
             int row = -1;
@@ -162,16 +171,19 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
             std::cout << "Plotter plays X at (" << row << ", " << col << ")\n"; 
             printBoard(board);
             drawX(row, col);
-            gameOver = someoneHasWon(board);
+            if (someoneHasWon(board)) {
+                break;
+            }
             revealPage();
             baseline = frame.clone();
         }
-        sleep(0.5);
+        sleep(1.5);
     }
     selectPen(3);
     drawWinner(board);// THIS NEEDS 2 B IMPLEMENTED LMAO
     selectPen(0);
-    // cap.release();
+    revealPage();
+    cap.release();
 }
 
 int main(void) {

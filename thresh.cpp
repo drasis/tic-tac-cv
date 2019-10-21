@@ -106,7 +106,7 @@ void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
   } 
 
   std::cout << "got largest contour\n";
-  if (dispContours) {
+  if (true) {
     cv::Scalar color(0, 0, 255);
     cv::drawContours(src, contourPoints, largestContourIndex, color, 2, 8,
             hierarchy, 0, cv::Point());
@@ -160,6 +160,9 @@ bool findBoardBounds(cv::VideoCapture& cap, cv::Mat& homographyMatrix, cv::Rect&
   cv::Mat paperImg;
   cv::Mat boardOverlay;
   cv::Mat src;
+  bool ret = false;
+
+  cv::Mat testView;
   for(int i = 0; i < 50; ++i)  {
     cap.read(src);
     if (src.empty()) {
@@ -193,20 +196,28 @@ bool findBoardBounds(cv::VideoCapture& cap, cv::Mat& homographyMatrix, cv::Rect&
           cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 
     std::cout << "contour points size: " << contourPoints.size() << std::endl;
+    testView = paperImg.clone();
     for (int i = 0; i < contourPoints.size(); ++i) {
       if (contourPoints[i].size() > 300) {
+        cv::drawContours(testView, contourPoints, i, cv::Scalar(0,0,255));
         cv::Rect boundingRect = cv::boundingRect(contourPoints[i]);
         std::cout << "contour > 300\n";
         if (boundingRect.y > 50 || boundingRect.y + boundingRect.height < paperImg.rows - 50
            || boundingRect.x < paperImg.cols - 100 || boundingRect.x > 50) {
           boardBounds = boundingRect;
-          return true; //we actually found the bounding rect
+          ret = true; //we actually found the bounding rect
+          goto done;
         }
       }
     }
-    toOrEventually.clear();
+   toOrEventually.clear();
   }
-  return false; // :(
+
+done:
+  cv::imshow("test view", testView);
+  cv::waitKey(0);
+ 
+  return ret; // :(
 }
 
 void drawBoundingBoardRect(const cv::Mat& src, cv::Mat& dst, const cv::Rect& boundingRect) {
@@ -279,7 +290,7 @@ bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   int boxWidth = boardBounds.width / 3;
   for (int i = 0; i < 9; i++) {
       if (board[i] == BOX_EMPTY) {
-          std::cout << "checking " << i << " for O's" << std::endl;
+          //std::cout << "checking " << i << " for O's" << std::endl;
           // check for box in frame
           cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
                   boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
@@ -311,7 +322,7 @@ bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   return false;
 }
 
-#if 0
+#if 1
 int main(int argc, char** argv) {
   cv::VideoCapture cap(2);
   cv::Mat src;
@@ -354,15 +365,15 @@ int main(int argc, char** argv) {
     }
 
     cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
-    checkForO(paperImg, boundingRect, board);
+    //checkForO(paperImg, boundingRect, board);
     //cv::imshow("test", paperImg);
     //cv::waitKey(5);
 
 
-    //drawBoundingBoardRect(paperImg, paperImg, boundingRect);
+    drawBoundingBoardRect(paperImg, paperImg, boundingRect);
     
-	//cv::imshow("contours", paperImg);
-	//cv::waitKey(1);
+	cv::imshow("contours", paperImg);
+	cv::waitKey(0);
   }
 
   return 0;
