@@ -1,4 +1,5 @@
 #include "plotter.h"
+#include <cstdio>
 
 
 Plotter::Plotter(const std::string file, int speed) {
@@ -115,8 +116,8 @@ bool Plotter::sendBytes(std::string bytes) {
     bytes.append("OA;");
     std::cout << "Writing command: " << bytes << " || length is " << bytes.length() << std::endl;
     write(serialDev, bytes.c_str(), bytes.length());
-    char ret[1] = {0};
-    while (ret[0] != 13) {
+    char ret = 0;
+    while (ret != 13) {
         read(serialDev, &ret, 1);
     }
     std::cout << "flushed\n";
@@ -144,7 +145,7 @@ bool Plotter::flush(void) {
     return true;
 }
 
-#if 1
+#if 0
 int main(void) {
     Plotter p;
     p.selectPen(1);

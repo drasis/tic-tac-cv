@@ -3,23 +3,45 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+#include "luaconf.h"
+
+void printBoard(BoxState board[9]); 
 
 void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
+    std::cout << "********************************************" << std::endl;
+    std::cout << "INITIALIZING. DO NOT FUCK WITH THE PLOTTER" << std::endl;
+    std::cout << "********************************************" << std::endl;
+
+
     // draw tictactoe board
     selectPen(1);
+    std::cout << "drawing board\n:";
     drawBoard();
 
     selectPen(2);
     // send pen to 0,0
     revealPage();
+
     cv::Mat frame;
-    while(!frame.empty()) {
+    while(frame.empty()) {
         cap.read(frame);
     }
     // calculate homography matrix
     findHomography(frame, homography);
+    cv::Mat frameWarped;
+    cv::warpPerspective(frame, frameWarped, homography, frame.size());
+    std::cout << "out of homography:\n" << homography << std::endl;
+    cv::imshow("out of homography", frameWarped);
+    cv::waitKey(0);
+
     // find bounds of tictactoe board
     findBoardBounds(cap, homography, boardBounds);
+    cv::rectangle(frameWarped, boardBounds, cv::Scalar(0,0,255));
+    cv::imshow("with rectangle", frameWarped);
+    cv::waitKey(0);
+    std::cout << "********************************************" << std::endl;
+    std::cout << "              YOU MAY DRAW NOW" << std::endl;
+    std::cout << "********************************************" << std::endl;
 }
 
 // wrapper for lua calls
@@ -28,14 +50,17 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     int isnum;
     lua_getglobal(L, "getPlotterMove"); 
     for (int i = 0; i < 9; i++) {
-        lua_pushinteger(L, board[i]);
+        lua_pushinteger(L, (int)board[i]);
     }
-    if (lua_pcall(L, 9, 1, 0) != LUA_OK) {
-        throw std::runtime_error("Lua is NOT ok");
+    lua_pushinteger(L, 1);
+    if (lua_pcall(L, 10, 1, 0) != 0) {
+        std::cout << lua_tostring(L, -1) << std::endl;
+        throw std::runtime_error("Lua pcall NOT ok");
     }
 
-    ret = lua_tointegerx(L, -1, &isnum);
-    if (!isnum || ret < 0 || ret > 8) {
+    ret = lua_tointeger(L, -1);
+    std::cout << "got " << ret << " from lua\n";
+    if (ret < 0 || ret > 8) {
         throw std::runtime_error("Lua is NOT OK");
     }
     lua_pop(L, 1);
@@ -46,44 +71,78 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
 
 bool someoneHasWon(BoxState board[9]) {
     for (int i = 0; i < 3; ++i) {
-        if (board[i] == board[i + 3] == board[i + 6] && board[i] != BOX_EMPTY) {
+        if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
+            //printBoard(board);
             return true;
         }
-        if (board[i * 3] == board[i * 3 + 1] == board[i * 3 + 2] 
-            && board[i * 3] != BOX_EMPTY) {
+        if ((board[i * 3] == board[i * 3 + 1]) && (board[i * 3] == board[i * 3 + 2]) 
+            && (board[i * 3] != BOX_EMPTY)) {
+            //printBoard(board);
             return true;
         }
     }
-    return (board[0] == board[4] == board[8] && board[0] != BOX_EMPTY)
-            || (board[2] == board[4] == board[6] && board[2] != BOX_EMPTY);
+    if ((board[0] == board[4]) && (board[0] == board[8]) && (board[0] != BOX_EMPTY)) {
+        //printBoard(board);
+        return true;
+    }
+    if ((board[2] == board[4]) && (board[2] == board[6]) && (board[2] != BOX_EMPTY)) {
+        return true;
+    }
+    return false;
 }
+
 void drawWinner(BoxState board[9]) {
     // WinLine[8] = {  }
     for (int i = 0; i < 3; ++i) {
-        if ((board[i] == board[i + 3] == board[i + 6] && board[i] != BOX_EMPTY)) {
+        if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
             drawWin((WinLine)(i));
+            //printBoard(board);
             return;
         }
-        if (board[i * 3] == board[i * 3 + 1] == board[i * 3 + 2] 
-            && board[i * 3] != BOX_EMPTY) {
+        if ((board[i * 3] == board[i * 3 + 1]) && (board[i * 3] == board[i * 3 + 2]) 
+            && (board[i * 3] != BOX_EMPTY)) {
             drawWin((WinLine)(i + 3));
+            //printBoard(board);
             return;
         }
     }
-    if (board[0] == board[4] == board[8] && board[0] != BOX_EMPTY) {
+    if ((board[0] == board[4]) && (board[0] == board[8]) && (board[0] != BOX_EMPTY)) {
+        //printBoard(board);
         drawWin(WIN_DIAG_0);
         return;
     }
-    if (board[2] == board[4] == board[6] && board[2] != BOX_EMPTY) {
+    if ((board[2] == board[4]) && (board[2] == board[6]) && (board[2] != BOX_EMPTY)) {
+        //printBoard(board);
         drawWin(WIN_DIAG_1);
         return;
     }
 }
 
+void printBoard(BoxState board[9]) {
+     std::cout << "---------Board State ----------------\n";
+     for (int i = 0; i < 3; i++) {
+         for (int j = 0; j < 3; j++) {
+             int curr = (i*3)+j;
+             switch(board[curr]) {
+                 case BOX_EMPTY:
+                     std::cout << ". ";
+                     break;
+                 case BOX_O:
+                     std::cout << "O ";
+                     break;
+                 case BOX_X:
+                     std::cout << "X ";
+                     break;
+             }
+         }
+         std::cout << std::endl;
+     }
+ 
+}
+
 bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
     lua_State *L, cv::VideoCapture& cap) {
-    bool gameOver = false;
-    BoxState board[9];
+    BoxState board[9] = {BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY};
     cv::Mat frame;
     cv::Mat baseline;
     if (!cap.isOpened()) {
@@ -93,37 +152,64 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
     // initialize baseline
     cap.read(frame);
     cv::warpPerspective(frame, baseline, homography, frame.size());
-    while (!gameOver) {
+    while (true) {
         cap.read(frame);
         // crop frame to paper
         cv::warpPerspective(frame, frame, homography, frame.size());
         if (handInFrame(baseline, frame)) {
+            std::cout << "hand found in frame\n";
             continue;
         } else if (checkForO(frame, boardBounds, board)) {
+            if (someoneHasWon(board)) {
+                break;
+            }
+            std::cout << "Found O in frame. Plotter's turn\n";
             // Plotter's turn.
             int row = -1;
             int col = -1;
             getPlotterAI(board, &row, &col, L);
+            std::cout << "Plotter plays X at (" << row << ", " << col << ")\n"; 
+            printBoard(board);
             drawX(row, col);
-            gameOver = someoneHasWon(board);
+            if (someoneHasWon(board)) {
+                break;
+            }
             revealPage();
             baseline = frame.clone();
         }
+        sleep(1.5);
     }
+    selectPen(3);
     drawWinner(board);// THIS NEEDS 2 B IMPLEMENTED LMAO
-    // cap.release();
+    selectPen(0);
+    revealPage();
+    cap.release();
 }
 
 int main(void) {
     bool playAgain = true;
     cv::VideoCapture cap(2);
+    if (!cap.isOpened()) {
+        return -1;
+    }
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
+    int status = luaL_dofile(L, "./minimax.lua");
+    if (status) {
+        std::cout << "couldn't open minimax.lua\n";
+        std::cout << "Error: " << lua_tostring(L, -1) << std::endl;
+        return -1;
+    }
+    std::cout << L << std::endl;
+    std::cout << "opened lua file\n";
     while (playAgain) {
         cv::Mat homography;
         cv::Rect boardBounds;
         initGame(homography, boardBounds, cap);
+        std::cout << "init game done\n";
         gameLoop(homography, boardBounds, L, cap);
+        std::cout << "game done\n";
+        playAgain = false;
         // get input from player
     }
     cap.release();

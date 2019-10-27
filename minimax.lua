@@ -22,7 +22,11 @@ function loadGame(pl)
 		end
 		game[i] = q
 	end
+<<<<<<< HEAD
 	board = boardNode(game, pl, 0)
+=======
+	return boardNode(game, pl, 0)
+>>>>>>> d758ca6e69c018d0e3083cbce3ddba28823eff04
 end
 
 function boardNode(game, pl, depth, i, j)
@@ -43,10 +47,15 @@ function boardNode(game, pl, depth, i, j)
 			end
 			local moves = {}
 			local piece = pieces[otherPlayer(self.player)]
+			--print("max of self: ", checkMax(self))
+			--print("min of self: ", checkMin(self))
 			if checkMax(self) == 0 and checkMin(self) == 0 then 
+				--print("we in here")
 				for i,r in ipairs(self.state) do
 					for j,v in ipairs(r) do
-						if v == ' ' then
+						-- print("this is v: ", v)
+						if v == 0 then
+						    -- print("we inserting in here")
 							table.insert(moves, 
 								boardNode(
 									copyAndSubstitue(self.state, i, j, piece),
@@ -69,6 +78,8 @@ function boardNode(game, pl, depth, i, j)
 			return moves
 		end,
 		display = function(self)
+			print("self: ", self)
+			print("self.state: ", self.state)
 			for j,i in ipairs(self.state) do
 				for q,v in ipairs(i) do
 					io.write(v, " ")
@@ -80,6 +91,10 @@ function boardNode(game, pl, depth, i, j)
 			return checkMax(self) ~= 0 or checkMin(self) ~= 0
 		end,
 		bestMove = function(self)
+		if true then
+			return self:possibleMoves()[math.random(1, #self:possibleMoves())]
+		end
+
 			if #self.moves == 0 then
 				return nil
 			end
@@ -217,7 +232,11 @@ end
 
 
 function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8, player)
+<<<<<<< HEAD
 	loadGame(player)
+=======
+	local board = loadGame(player)
+>>>>>>> d758ca6e69c018d0e3083cbce3ddba28823eff04
 	board.state[1][1] = p0
 	board.state[1][2] = p1
 	board.state[1][3] = p2
@@ -228,7 +247,12 @@ function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8, player)
 	board.state[3][2] = p7
 	board.state[3][3] = p8
 	minimax(board)
+	print(board)
+	board:display()
+	
 	board = board:bestMove()
+	print("board.state: ", board.state)
+	-- board:bestMove().display()
 	rtm = board.rowToMe - 1
 	ctm = board.colToMe - 1
 	return rtm * 3 + ctm

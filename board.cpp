@@ -1,4 +1,5 @@
 #include "board.h"
+#include <unistd.h>
 
 #define BOARD_BOX_LEN (1950)
 
@@ -24,18 +25,23 @@ bool drawBoard(void) {
     plt.drawLine(900, 4800, 6750, 4800);
     plt.drawLine(2850, 6750, 2850, 900);
     plt.drawLine(4800, 900, 4800, 6750);
-    return true;
+    return plt.flush();
 }
 
 bool revealPage(void) {
     plt.setPenSpeed(20);
+    plt.penUp();
     plt.setPenPos(0, 0);
     plt.setPenSpeed(5);
+    plt.flush();
+    sleep(2);
     return true;
 }
 
 bool selectPen(int pen) {
-    return plt.selectPen(pen);
+    plt.selectPen(pen);
+    plt.flush();
+    return true;
 }
 
 bool drawX(int row, int col) {
@@ -56,7 +62,7 @@ bool drawX(int row, int col) {
     
     // draw top right to bottom left diagonal
     plt.drawLine(bottomRight.x, topLeft.y, topLeft.x, bottomRight.y);
-    return true;
+    return plt.flush();
 }
 
 bool drawWin(WinLine line) {
@@ -113,7 +119,7 @@ bool drawWin(WinLine line) {
         default:
             return false;
     }
-    return true;
+    return plt.flush();
 }
 
 #if 0

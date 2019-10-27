@@ -83,7 +83,9 @@ void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
   std::vector<cv::Vec4i> hierarchy;
 
   // turn src into hsv img 
+  std::cout << "in find homograph\n";
   cv::cvtColor(src, srcHsv, cv::COLOR_BGR2HSV);
+  std::cout << "color\n";
 
   // create a mask of paper colors defined by hUpper/hLower, etc.
   cv::inRange(srcHsv, lowThresh, highThresh, afterThresh);
@@ -104,7 +106,7 @@ void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
   } 
 
   std::cout << "got largest contour\n";
-  if (dispContours) {
+  if (true) {
     cv::Scalar color(0, 0, 255);
     cv::drawContours(src, contourPoints, largestContourIndex, color, 2, 8,
             hierarchy, 0, cv::Point());
@@ -158,6 +160,9 @@ bool findBoardBounds(cv::VideoCapture& cap, cv::Mat& homographyMatrix, cv::Rect&
   cv::Mat paperImg;
   cv::Mat boardOverlay;
   cv::Mat src;
+  bool ret = false;
+
+  cv::Mat testView;
   for(int i = 0; i < 50; ++i)  {
     cap.read(src);
     if (src.empty()) {
@@ -191,20 +196,28 @@ bool findBoardBounds(cv::VideoCapture& cap, cv::Mat& homographyMatrix, cv::Rect&
           cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 
     std::cout << "contour points size: " << contourPoints.size() << std::endl;
+    testView = paperImg.clone();
     for (int i = 0; i < contourPoints.size(); ++i) {
       if (contourPoints[i].size() > 300) {
+        cv::drawContours(testView, contourPoints, i, cv::Scalar(0,0,255));
         cv::Rect boundingRect = cv::boundingRect(contourPoints[i]);
         std::cout << "contour > 300\n";
         if (boundingRect.y > 50 || boundingRect.y + boundingRect.height < paperImg.rows - 50
            || boundingRect.x < paperImg.cols - 100 || boundingRect.x > 50) {
           boardBounds = boundingRect;
-          return true; //we actually found the bounding rect
+          ret = true; //we actually found the bounding rect
+          goto done;
         }
       }
     }
-    toOrEventually.clear();
+   toOrEventually.clear();
   }
-  return false; // :(
+
+done:
+  cv::imshow("test view", testView);
+  cv::waitKey(0);
+ 
+  return ret; // :(
 }
 
 void drawBoundingBoardRect(const cv::Mat& src, cv::Mat& dst, const cv::Rect& boundingRect) {
@@ -254,8 +267,8 @@ int numDiffPixels(cv::Mat& baseline, cv::Mat& current, float thresh=90.0) {
     return count; 
 }
 
-bool handInFrame(cv::Mat& baseline, cv::Mat& current) {
-    return numDiffPixels(baseline, current) > 30000;
+bool handInFrame(cv::Mat& baseline, cv::Mat& current, float thresh) {
+    return numDiffPixels(baseline, current, thresh) > 30000;
 }
 
 bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
@@ -272,36 +285,38 @@ bool closeToTheEdge(cv::Mat& snippet, std::vector<cv::Point> contourPoints)  {
 
 
 // assumes frame has been homographized
-bool checkForO(cv::Mat& frame, cv::Rect& boardBounds, BoxState board[9]) {
+bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   int boxHeight = boardBounds.height / 3;
   int boxWidth = boardBounds.width / 3;
   for (int i = 0; i < 9; i++) {
-  if (board[i] == BOX_EMPTY) {
-      // check for box in frame
-      cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
-              boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
-      cv::Mat currSubImg = frame(subRect);
-      
-      // contour shit
-      cv::Mat boxEdges;
-      getEdges(currSubImg, boxEdges, 10);
+      if (board[i] == BOX_EMPTY) {
+          //std::cout << "checking " << i << " for O's" << std::endl;
+          // check for box in frame
+          cv::Rect subRect(boardBounds.x + ((i % 3) * boxWidth) ,
+                  boardBounds.y + ((i / 3) * boxHeight) , boxWidth, boxHeight);
+          cv::Mat currSubImg = frame(subRect);
+          
+          // contour shit
+          cv::Mat boxEdges;
+          getEdges(currSubImg, boxEdges, 10);
 
-      std::vector<std::vector<cv::Point>> contourPoints;
-      std::vector<cv::Vec4i> hierarchy;
-      cv::findContours(boxEdges, contourPoints, hierarchy,
-            cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
-      int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
-      if (largestContourIndex < 0) {
-          continue;
-      }
-      for (int j = 0; j < contourPoints.size(); j++) {
-        if (!closeToTheEdge(currSubImg, contourPoints[j])) {
-          if (contourPoints[j].size() > 80) {
-            board[i] = BOX_O;
-            return true; // :)        
+          std::vector<std::vector<cv::Point>> contourPoints;
+          std::vector<cv::Vec4i> hierarchy;
+          cv::findContours(boxEdges, contourPoints, hierarchy,
+                cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+          int largestContourIndex = findMaxIndex(contourPoints, vectorSizeCmp);
+          if (largestContourIndex < 0) {
+              continue;
           }
-        }
-      }
+          for (int j = 0; j < contourPoints.size(); j++) {
+            if (!closeToTheEdge(currSubImg, contourPoints[j])) {
+              if (contourPoints[j].size() > 80) {
+                std::cout << "found O\n";
+                board[i] = BOX_O;
+                return true; // :)        
+              }
+            }
+          }
     }
   }
   return false;
@@ -350,15 +365,15 @@ int main(int argc, char** argv) {
     }
 
     cv::warpPerspective(src, paperImg, homographyMatrix, src.size());
-    checkForO(paperImg, boundingRect, board);
+    //checkForO(paperImg, boundingRect, board);
     //cv::imshow("test", paperImg);
     //cv::waitKey(5);
 
 
-    //drawBoundingBoardRect(paperImg, paperImg, boundingRect);
+    drawBoundingBoardRect(paperImg, paperImg, boundingRect);
     
-	//cv::imshow("contours", paperImg);
-	//cv::waitKey(1);
+	cv::imshow("contours", paperImg);
+	cv::waitKey(0);
   }
 
   return 0;
