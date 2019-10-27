@@ -7,8 +7,8 @@ find_package( Lua REQUIRED )
 include_directories( ${LUA_INCLUDE_DIR} )
 
 add_executable( tic-tac main.cpp board.cpp thresh.cpp plotter.cpp)
-#add_executable( thresh thresh.cpp )
-add_executable( webcam webcam.cpp )
+# add_executable( thresh thresh.cpp )
+add_executable( webcam utils/webcam.cpp )
 #add_executable( luatest luatest.cpp )
 
 target_link_libraries( tic-tac ${OpenCV_LIBS} ${LUA_LIBRARIES})

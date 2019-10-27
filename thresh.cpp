@@ -30,6 +30,17 @@ bool vectorSizeCmp(std::vector<T> a, std::vector<T> b) {
 }
 
 // default: windowSize=20, thresh=.2
+
+/**
+ * @brief      Uses a cellular automata to alter a bitmask so that it is smoothed-out
+ *
+ * @param[in]  src         The source bitmask
+ * @param[out] dst         The destination of the smoothed bitmask
+ * @param[in]  windowSize  The height/width of the window used to 
+ * determine whether a pixel in the smoothed mask will be on/off
+ * @param[in]  thresh      The percentage of neighboring pixels that need to be "alive" for 
+ * a given pixel to survive
+ */
 void slidingGameOfLife(cv::Mat& src, cv::Mat& dst, int windowSize = 20, float thresh = .4) {
   int height = src.rows;
   int width = src.cols;
@@ -56,6 +67,12 @@ void slidingGameOfLife(cv::Mat& src, cv::Mat& dst, int windowSize = 20, float th
   dst = new_dst;
 }
 
+/**
+ * @brief      Alter a given bitmask so that any "islands" of pixels that are off are filled in
+ *
+ * @param[in]      src   The source bitmask
+ * @param[out]      dst   The destination bitmask
+ */
 void fillInCheese(cv::Mat& src, cv::Mat& dst) {
   cv::Mat floodFilled = src.clone();
   cv::floodFill(floodFilled, cv::Point(0,0), cv::Scalar(255));
@@ -70,7 +87,6 @@ void fillInCheese(cv::Mat& src, cv::Mat& dst) {
  * int hUpper=137, int sUpper=162 int vUpper = 255,
  * int hLower = 96, int sLower = 14, int vLower = 118
  */
-
 void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
                  cv::Scalar lowThresh, cv::Scalar highThresh,
                  bool dispContours) {
@@ -127,32 +143,21 @@ void findHomography(cv::Mat& src, cv::Mat& homographyMatrix,
  
 }
 
+/**
+ * @brief      Gets the edges of an input image using OpenCV's canny edge detector.
+ *
+ * @param      src          The source image
+ * @param[out] dst          The destination bitmask
+ * @param[in]  threshold    The threshold
+ * @param[in]  ratio        The ratio
+ * @param[in]  kernel_size  The kernel size
+ */
 void getEdges(cv::Mat& src, cv::Mat& dst, int threshold=25, int ratio=3, int kernel_size=3) {
   cv::Mat blurred;
   cv::Mat gray;
   cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY); 
   cv::blur(gray, blurred, cv::Size(3,3)); 
   cv::Canny(blurred, dst, threshold, threshold*ratio, kernel_size); 
-}
-
-
-void findRectcoords(cv::Mat& paperImg, std::vector<cv::RotatedRect>& boardCoords) {
-
-}
-
-void drawRectCoords(cv::Mat& paperImg, cv::Mat& boardOverlay, 
-	std::vector<cv::RotatedRect>& boardCoords) {
-
-}
-
-void getRidOfPerimeter(cv::Mat& src, cv::Mat& dst) {
-  cv::Mat floodFilled = src.clone();
-  cv::floodFill(floodFilled, cv::Point(0,0), cv::Scalar(125));
-
-  // cv::Mat inv;
-  // cv::bitwise_not(floodFilled, dst);
-
-  dst = floodFilled;//(src | inv);
 }
 
 bool findBoardBounds(cv::VideoCapture& cap, cv::Mat& homographyMatrix, cv::Rect& boardBounds) {

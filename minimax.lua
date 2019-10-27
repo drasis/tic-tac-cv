@@ -1,3 +1,5 @@
+-- Implementation of minimax decision algorithm to be used as LuaState
+
 local max = 0
 local min = 1
 local pieces = {}
@@ -22,11 +24,7 @@ function loadGame(pl)
 		end
 		game[i] = q
 	end
-<<<<<<< HEAD
-	board = boardNode(game, pl, 0)
-=======
 	return boardNode(game, pl, 0)
->>>>>>> d758ca6e69c018d0e3083cbce3ddba28823eff04
 end
 
 function boardNode(game, pl, depth, i, j)
@@ -39,23 +37,15 @@ function boardNode(game, pl, depth, i, j)
 		rowToMe = i,
 		colToMe = j,
 		possibleMoves = function(self)
-			-- if checkMax(self) ~= 0 or checkMin(self) ~= 0 then
-			-- 	self:display()
-			-- end
 			if #self.moves > 0 then
 				return self.moves
 			end
 			local moves = {}
 			local piece = pieces[otherPlayer(self.player)]
-			--print("max of self: ", checkMax(self))
-			--print("min of self: ", checkMin(self))
 			if checkMax(self) == 0 and checkMin(self) == 0 then 
-				--print("we in here")
 				for i,r in ipairs(self.state) do
 					for j,v in ipairs(r) do
-						-- print("this is v: ", v)
 						if v == 0 then
-						    -- print("we inserting in here")
 							table.insert(moves, 
 								boardNode(
 									copyAndSubstitue(self.state, i, j, piece),
@@ -66,13 +56,6 @@ function boardNode(game, pl, depth, i, j)
 						end
 					end
 				end
-			-- else
-			-- 	for j,i in ipairs(self.state) do
-			-- 		for q,v in ipairs(i) do
-			-- 			io.write(v, " ")
-			-- 		end
-			-- 		io.write("\n")
-			-- 	end
 			end
 			self.moves = moves
 			return moves
@@ -176,10 +159,6 @@ function checkPlayer(state, piece)
 	-- check diagonals
 	wins = wins + diagCount(state, piece)
 	return wins
-	-- if wins > 0 then
-	-- 	return 1
-	-- end
-	-- return 0
 end
 
 function checkMax(board)
@@ -224,7 +203,6 @@ function minimax(state)
 				best.score = score
 			end
 		end
-		--state.score = state.score + possibleMove.score
 	end
 	state.best = best
 	return best
@@ -232,11 +210,7 @@ end
 
 
 function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8, player)
-<<<<<<< HEAD
-	loadGame(player)
-=======
 	local board = loadGame(player)
->>>>>>> d758ca6e69c018d0e3083cbce3ddba28823eff04
 	board.state[1][1] = p0
 	board.state[1][2] = p1
 	board.state[1][3] = p2
@@ -252,49 +226,7 @@ function getPlotterMove(p0, p1, p2, p3, p4, p5, p6, p7, p8, player)
 	
 	board = board:bestMove()
 	print("board.state: ", board.state)
-	-- board:bestMove().display()
 	rtm = board.rowToMe - 1
 	ctm = board.colToMe - 1
 	return rtm * 3 + ctm
 end
-
--- loadGame(1)
-
--- board:display()
--- -- print("------")
--- -- minimax(board)
--- -- print("board score: ", board.score)
--- while checkMax(board) == 0 and checkMin(board) == 0 do
--- 	io.write("row, column: ")
--- 	a,b = io.read("*n","*n")
--- 	local piece = pieces[otherPlayer(board.player)]
--- 	board = boardNode(copyAndSubstitue(board.state, a, b, piece),
--- 		otherPlayer(board.player), board.depth + 1)
--- 	board:display()
--- 	if checkMax(board) ~= 0 or checkMin(board) ~= 0 then
--- 		break
--- 	end
--- 	print("------\ncomputer move:")
--- 	getPlotterMove(board.state[1][1], board.state[1][2], board.state[1][3], 
--- 					board.state[2][1], board.state[2][2], board.state[2][3], 
--- 					board.state[3][1], board.state[3][2], board.state[3][3], board.player)
--- 	-- board = board:bestMove()
--- 	board:display()
--- end
-
--- print(board.best.move.best.move.best.score)
--- print("total nodes: ", totalNodes)
--- print("total leafs: ", leafs)
--- for i,v in ipairs(board:possibleMoves()) do
--- 	for j,q in ipairs(v:possibleMoves()) do
--- 		for k,s in ipairs(q:possibleMoves()) do
--- 			s:display()
--- 			-- print(s.depth)
--- 			abc = abc + 1
--- 			print("------")
--- 		end
--- 	end
--- end
--- print(abc)
-
--- print(-infinity)

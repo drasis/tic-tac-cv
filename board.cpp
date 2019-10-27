@@ -1,16 +1,23 @@
 #include "board.h"
 #include <unistd.h>
 
+// size of the edge of the board in HPGL co-ordinates
 #define BOARD_BOX_LEN (1950)
 
+/**
+ * @brief container for the x,y paper co-ordiantes
+ */
 typedef struct _PaperCoord
 {
     int x;
     int y;
 } PaperCoord;
 
-// translation table from board coords (ie, (0,0) - (2,2)) to paper coordinates
-// the paper coordinate is the top left of that box
+
+/**
+ * @brief translation table from board coords (ie, (0,0) - (2,2))
+ * to paper coordinates the paper coordinate is the top left of that box
+ */
 static const PaperCoord boardToPaper[3][3] = {
     { {.x = 6750,  .y = 900}, {.x = 4800,  .y = 900}, {.x = 2850,  .y = 900}, }, 
     { {.x = 6750, .y = 2850}, {.x = 4800, .y = 2850}, {.x = 2850, .y = 2850}, },
@@ -40,8 +47,7 @@ bool revealPage(void) {
 
 bool selectPen(int pen) {
     plt.selectPen(pen);
-    plt.flush();
-    return true;
+    return plt.flush();
 }
 
 bool drawX(int row, int col) {
@@ -50,9 +56,7 @@ bool drawX(int row, int col) {
     }
     static const int margin = 100;
     PaperCoord topLeft = boardToPaper[row][col];
-    //std::cout << "(r="<<row<<",c="<<col<<") => (" << topLeft.x << ", " << topLeft.y << ")\n";
     PaperCoord bottomRight = {.x = topLeft.x - (BOARD_BOX_LEN - margin), .y = topLeft.y + BOARD_BOX_LEN - margin};
-    //std::cout << "(r="<<row<<",c="<<col<<") => (" << bottomRight.x << ", " << bottomRight.y << ")\n";
 
     topLeft.x -= margin;
     topLeft.y += margin;

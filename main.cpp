@@ -5,18 +5,55 @@
 #include "lualib.h"
 #include "luaconf.h"
 
-void printBoard(BoxState board[9]); 
 
-void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) {
+/**
+ * @brief      Prints a board.
+ * @param[in]  board represents the state of the board from 
+ * left-to-right, top-to-bottom
+ */
+void printBoard(BoxState board[9]) {
+     std::cout << "---------Board State ----------------\n";
+     for (int i = 0; i < 3; i++) {
+         for (int j = 0; j < 3; j++) {
+             int curr = (i*3)+j;
+             switch(board[curr]) {
+                 case BOX_EMPTY:
+                     std::cout << ". ";
+                     break;
+                 case BOX_O:
+                     std::cout << "O ";
+                     break;
+                 case BOX_X:
+                     std::cout << "X ";
+                     break;
+             }
+         }
+         std::cout << std::endl;
+     }
+}
+
+/**
+ * @brief
+ * Here an instance of the tic-tac-toe game initialized:
+ * The board is drawn, a homography matrix is found (from the video frame to
+ * the paper bounds), and the pixel coordinates of the bounds of the 
+ * tic-tac-toe board are found
+ * @param[out] homography a 3x3 matrix that represents the transformation from 
+ *      frame coordinates to paper coordinates
+ * @param[out] boardBounds a rectangle that represents the bounding box of the 
+ * tic-tac-toe board in paper coordinates
+ * @param[in] cap the webcam feed
+ */
+void initGame(cv::Mat& homography, cv::Rect& boardBounds, cv::VideoCapture& cap) {
     std::cout << "********************************************" << std::endl;
-    std::cout << "INITIALIZING. DO NOT FUCK WITH THE PLOTTER" << std::endl;
+    std::cout << "INITIALIZING. DO NOT SCREW WITH THE PLOTTER" << std::endl;
     std::cout << "********************************************" << std::endl;
 
 
     // draw tictactoe board
     selectPen(1);
     std::cout << "drawing board\n:";
-    drawBoard();
+    drawBoard();    
 
     selectPen(2);
     // send pen to 0,0
@@ -44,7 +81,15 @@ void initGame(cv::Mat& homography, cv::Rect& boardBounds,cv::VideoCapture& cap) 
     std::cout << "********************************************" << std::endl;
 }
 
-// wrapper for lua calls
+/**
+ * @brief      takes the state of the board, passes it to the lua minimax
+ * algorithm to get the game's response
+ *
+ * @param[in, out] board  The current state of the board
+ * @param[out]     row    The row of the game's move
+ * @param[out]     col    The column of the game's move
+ * @param[in]      L      The global Luastate
+ */
 void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     int ret;
     int isnum;
@@ -69,6 +114,13 @@ void getPlotterAI(BoxState board[9], int *row, int *col, lua_State *L) {
     *col = ret % 3;
 }
 
+/**
+ * @brief      determines whether the player or computer has won
+ *
+ * @param[in]      board  The board
+ *
+ * @return     whether the player or computer has won
+ */
 bool someoneHasWon(BoxState board[9]) {
     for (int i = 0; i < 3; ++i) {
         if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
@@ -91,8 +143,13 @@ bool someoneHasWon(BoxState board[9]) {
     return false;
 }
 
+/**
+ * @brief      Takes the board, and draws a line over the winning 
+ * row/column/diagonal.
+ *
+ * @param      board[in]  The state of a winning board
+ */
 void drawWinner(BoxState board[9]) {
-    // WinLine[8] = {  }
     for (int i = 0; i < 3; ++i) {
         if ((board[i] == board[i + 3]) && (board[i] == board[i + 6]) && (board[i] != BOX_EMPTY)) {
             drawWin((WinLine)(i));
@@ -118,38 +175,32 @@ void drawWinner(BoxState board[9]) {
     }
 }
 
-void printBoard(BoxState board[9]) {
-     std::cout << "---------Board State ----------------\n";
-     for (int i = 0; i < 3; i++) {
-         for (int j = 0; j < 3; j++) {
-             int curr = (i*3)+j;
-             switch(board[curr]) {
-                 case BOX_EMPTY:
-                     std::cout << ". ";
-                     break;
-                 case BOX_O:
-                     std::cout << "O ";
-                     break;
-                 case BOX_X:
-                     std::cout << "X ";
-                     break;
-             }
-         }
-         std::cout << std::endl;
-     }
- 
-}
+/**
+ * @brief      This is where the magic happens. The game board is initialized to
+ * empty boxes. While there isn't a winner, we check if there is a hand in the frame,
+ * and whether there is a new 'O' on the board.
+ *
+ * @param[in]  homography   The homography from camera coordinates to paper coordinates
+ * @param[in]  boardBounds  The board bounds relative to paper coordiantes
+ * @param      L            The global Luastate
+ * @param      cap          The the webcam feed
+ *
+ * @return     whether the game is able to sucessfully open the webcam feed
+ */
 
 bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
     lua_State *L, cv::VideoCapture& cap) {
-    BoxState board[9] = {BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY, BOX_EMPTY};
+    BoxState board[9] = {BOX_EMPTY, BOX_EMPTY, BOX_EMPTY,
+     BOX_EMPTY, BOX_EMPTY, BOX_EMPTY,
+     BOX_EMPTY, BOX_EMPTY, BOX_EMPTY};
     cv::Mat frame;
     cv::Mat baseline;
     if (!cap.isOpened()) {
         return false;
     }
 
-    // initialize baseline
+    // initialize baseline (this is used to check
+    // whether there is a hand in the frame)
     cap.read(frame);
     cv::warpPerspective(frame, baseline, homography, frame.size());
     while (true) {
@@ -180,11 +231,12 @@ bool gameLoop(const cv::Mat& homography, const cv::Rect& boardBounds,
         sleep(1.5);
     }
     selectPen(3);
-    drawWinner(board);// THIS NEEDS 2 B IMPLEMENTED LMAO
+    drawWinner(board);
     selectPen(0);
     revealPage();
     cap.release();
 }
+
 
 int main(void) {
     bool playAgain = true;
@@ -210,7 +262,6 @@ int main(void) {
         gameLoop(homography, boardBounds, L, cap);
         std::cout << "game done\n";
         playAgain = false;
-        // get input from player
     }
     cap.release();
     std::cout << "thanks 4 playing :)\n";
