@@ -1,6 +1,6 @@
 ## Human vs. Plotter Tic-Tac-Toe
 
-@johnvtan and I used a Playstation eye and 1980's HP pen-plotter to create a new kind of user interface:
+[@johnvtan](https://github.com/johnvtan) and I used a Playstation eye and 1980's HP pen-plotter to create a new kind of user interface:
 
 <p align="center">
 
