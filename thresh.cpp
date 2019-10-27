@@ -322,7 +322,7 @@ bool checkForO(cv::Mat& frame, const cv::Rect& boardBounds, BoxState board[9]) {
   return false;
 }
 
-#if 1
+#if 0
 int main(int argc, char** argv) {
   cv::VideoCapture cap(2);
   cv::Mat src;
